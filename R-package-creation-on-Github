@@ -47,3 +47,7 @@ You can now manage your package with Github Desktop (commit / push / pull etc.).
 You will not need to commit anything from RStudio or to run use_git() or something
 like that. 
 
+*** Step 5:
+During the development of the package, you will have to use roxygenise() and to run the install.
+Make sure that you have run "More / Configure Build tools" and clicked the "Generate documentation
+using Roxygen". 
