@@ -44,4 +44,6 @@ Now navigate to the R folder with your package (e.g.  <home> / data / R / github
 
 *** Step 4:
 You can now manage your package with Github Desktop (commit / push / pull etc.).
+You will not need to commit anything from RStudio or to run use_git() or something
+like that. 
 
