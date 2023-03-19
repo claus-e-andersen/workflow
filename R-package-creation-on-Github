@@ -1,0 +1,43 @@
+File: R-package-creation-on-Git
+Created: March 19, 2023
+Revised: March 19, 2023
+Name: Claus E. Andersen
+
+This is my workflow for making a new R package and to make a connection
+with Github using the Github desktop application.
+
+In Rstudio:
+
+Step 1:
+Select "New project" / "New directory" / "R package"
+Select a name (e.g. clanENDF)
+Check the box "Create a git repository"
+This package could e.g. be located on your local hard drive at:
+  <home> / data / R / github / clanENDF
+
+Step 2:
+From the command line in Rstudio:
+library(usethis)
+use_git()
+use_github()
+
+The use_github() may not work if you do not have a valid
+token for youe github account.
+
+You can get a token from the github website (see settings / developer settings)
+
+Alternatively:
+library(gitcreds)
+gitcreds_get()
+gitcreds_set()
+
+After having run use_github() sucessfully, you will have a repro on your
+github account (e.g. called clanENDF).
+
+Step 3:
+You can now open the Github Desktop application.
+Select "Add" / "Add an existing repository" 
+Now navigate to the R folder with your package (e.g.  <home> / data / R / github / clanENDF).
+
+Step 4:
+You can now manage your package with Github Desktop (commit / push / pull etc.)
