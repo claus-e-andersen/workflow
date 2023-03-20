@@ -1,0 +1,481 @@
+# Make pdf, png or PS
+
+grand.plotfilename <- "Junk-EPR-curve-001-plot"
+
+if(FALSE){
+png.fac <- 1.5
+png(filename = paste(grand.plotfilename,"%03d.png",sep=""),
+   width = png.fac*20, height = png.fac*13, units = "cm", pointsize = png.fac*10,
+    bg = "white", res = 600, family = "arial", restoreConsole = TRUE,
+    type = c("windows", "cairo", "cairo-png")[1])
+close.device.wanted <- TRUE
+}
+
+if(!FALSE){
+inch.fac <- 2.54 / 1.2
+pdf(paste(grand.plotfilename,".pdf",sep=""), width = 29.7/inch.fac, height = 21/inch.fac,pointsize=19,family="Courier")
+#dev.off()
+close.device.wanted <- TRUE
+}
+
+if(FALSE){
+postscript(paste(grand.plotfilename,".ps",sep=""),onefile=TRUE) 
+close.device.wanted <- TRUE
+}
+
+
+# plot data.
+
+# Close device - if plotting to fales
+if(close.device.wanted) dev.off()
+
+###################################################################
+# How to add figure numbers!
+###################################################################
+
+do.footer <- function(Fig.no.sel=NA,
+                      txt.extra="",
+                      pos.x=0.8, 
+                      pos.y=0.01, 
+                      cex=1, 
+                      col="black",
+                      print.wanted=TRUE){
+# Objective: To add a small footer with figure number
+# such that reference can be made to specific 
+# figures in a large report. The function can also
+# write a large "DRAFT" statement across a figure.
+
+# Created: February 2023
+# Revised: March 10, 2023
+# Name: Claus E. Andersen
+
+# Side effect warning:
+# This function creates and modifies the variable
+# Fig.no.global in the global environment.
+
+# Sample call:
+# require(lattice)
+# require(clanLattice)
+# rm(Fig.no.global)
+# PP <- txtplot("Should be figure 1")
+# do.footer()
+
+# Fig.no.global <- 99
+# PP <- txtplot("Should be figure 100")
+# do.footer()
+
+# PP <- txtplot("Should be figure 400")
+# do.footer(400)
+
+#  PP <- txtplot("Should be figure 500")
+#  do.footer(500,txt.extra="DRAFT",pos.x=0.3,pos.y=0.7,cex=6,col="grey")
+
+################################################################
+
+# First ascertain that we have a global figure number.
+if(!exists("Fig.no.global",envir = .GlobalEnv)){
+  assign("Fig.no.global",0,envir = .GlobalEnv)
+}
+
+# Then check if a figure number was supplied in the function call (sel).
+if(!is.na(Fig.no.sel)){
+  Fig.no.global <- Fig.no.sel
+}
+
+# If nothing was supplied, use global number
+if(is.na(Fig.no.sel)){
+  Fig.no.global <- get("Fig.no.global",envir = .GlobalEnv) + 1
+  Fig.no.global <- as.integer(Fig.no.global)
+  assign("Fig.no.global",Fig.no.global,envir = .GlobalEnv)
+}
+# Finally, print the footer 
+if(print.wanted){
+  PP <- list(pos.x, pos.y,1)
+  PP <- txtplot(paste("Fig. ",Fig.no.global,txt.extra), 
+                new=FALSE, PP, cex=cex, col=col)
+}
+} # end of do.footer function
+
+
+######################################################3
+
+update.packages(ask=FALSE, CheckBuilt=TRUE)
+
+######################################################3
+
+Tricks from the cover of my R lattice book!
+
+
+auto.key=list(space="right,columns=3")
+
+par.strip.text=list(cex=1.2)
+
+main=list("My title ....", just="left", x=grid::unit(10,"mm"))
+
+
+my.settings <- list(par.main.text=list(font=2,just="left",x=grid::unit(10,"mm")))
+
+xyplot(..., par.settings=my.settings)
+
+How to get the panel number:
+  panel.number()
+
+
+panel=function(x,y,subscripts, groups,...)
+
+if(missing(groups)){
+panel.xyplot(x,y,...)
+} else {
+panel.superpose(x,y,subscripts,groups...)
+}
+
+##############################################
+cex0 <- 0.9
+
+panel.abline(fm,lwd=2,col="orange")
+cc <- coefficients.ca(fm)
+
+grid::grid.text(paste("Intercept =", sprintf("%.5e",cc$coeff[1]),"+/-", sprintf("%.5e",cc$u.coeff[1]),""), 
+                  x = grid::unit(0.1, "npc"), 
+                  y = grid::unit(0.95, "npc"), 
+                  just = 0, 
+                  gp = grid::gpar(cex = cex0))
+
+
+grid::grid.text(paste("N =", length(x)), 
+                  x = grid::unit(0.1,  "npc"), 
+                  y = grid::unit(0.75, "npc"), 
+                  just = 0, 
+                  gp = grid::gpar(cex = cex0))
+            
+
+grid::grid.text(paste("Net:", sprintf("%.5e", round(M.raw.net.robust, 1)),"(robust)"), 
+                x = grid::unit(0.05, "npc"), 
+                y = grid::unit(0.40, "npc"), 
+                just = 0, 
+                gp = grid::gpar(cex = cex0))
+
+##############################################
+Prepanel example
+
+# +/- 20 %
+prepanel.ca <- function(x, y, type, subscripts, groups, ...){
+list(ylim=mean(y,na.rm=TRUE)*c(0.80,1.2))
+}
+
+xyplot(cps.2 ~ sec|paste(fn.no),
+aspect=1,
+main="Dose pr. sec \n Scale = mean +/- 20%",
+prepanel=prepanel.ca,
+scales=list(x="sliced",y="free"),
+data=df.censor,
+type="l",
+panel=function(x,y,...){
+panel.xyplot(x,y,...)
+}
+)
+
+##############################################
+How to output parameters in a nice table
+##############################################
+
+det.12.ok <- !TRUE
+det.34.ok <-  TRUE
+
+det.12.ref <- "None"
+det.34.ref <- "F134"
+
+# Selection of data needed to correct for the stem signal
+FS.ref    <- 20
+config.A  <- "Min"
+config.B  <- "EasyMax"
+
+# Selection of data needed to fix the absolute dose 
+# (not very important for field output factor measurements)
+FS.abs     <- 10
+config.abs <- "Min"
+Gy.abs.12  <- 1.0
+Gy.abs.34  <- 1.0
+
+df.parm <- rbind(
+data.frame(name="DP1 in use? det.12.ok",  value=as.character(det.12.ok),stringsAsFactors=FALSE),
+data.frame(name="DP2 in use ? det.34.ok", value=as.character(det.34.ok),stringsAsFactors=FALSE),
+data.frame(name="",                       value=as.character(""),stringsAsFactors=FALSE),
+data.frame(name="DP1 : det.12.ref",       value=as.character(det.12.ref),stringsAsFactors=FALSE),
+data.frame(name="DP2 : det.34.ref",       value=as.character(det.34.ref),stringsAsFactors=FALSE),
+data.frame(name="",                       value=as.character(""),stringsAsFactors=FALSE),
+data.frame(name="Stem: FS.ref (cm)",      value=as.character(FS.ref),stringsAsFactors=FALSE),
+data.frame(name="Stem: config.A",         value=as.character(config.A),stringsAsFactors=FALSE),
+data.frame(name="Stem: config.B",         value=as.character(config.B),stringsAsFactors=FALSE),
+data.frame(name="",                       value=as.character(""),stringsAsFactors=FALSE),
+data.frame(name="Absolute: FS.abs (cm)",  value=as.character(FS.abs),stringsAsFactors=FALSE),
+data.frame(name="Absolute: config.abs",   value=as.character(config.abs),stringsAsFactors=FALSE),
+data.frame(name="Absolute: Gy.abs.12",    value=as.character(Gy.abs.12),stringsAsFactors=FALSE),
+data.frame(name="Absolute: Gy.abs.34",    value=as.character(Gy.abs.34),stringsAsFactors=FALSE)
+)
+
+N.dots <- 55
+
+#df.parm$value <- substring.with.dots(df.parm$value,n=N.dots+1)
+#print(df.parm)
+
+# Leave empty lines without dots:
+ok <- !df.parm$name=="" 
+if(sum(ok)>0){
+  df.parm$value[ok] <- substring.with.dots(df.parm$value[ok],n=N.dots+1)
+}
+
+line.height=line.height0 <- 0.022
+line.height=line.height0 <- 0.024
+PP <- list(0.05,0.97,1)
+PP <- txtplot(paste("Main parameters used in this analysis: \n",sep=""), new=TRUE, PP, cex=0.5,line.height=line.height0)
+PP <- txtplot(data.frame(df.parm),new=FALSE,PP,cex=0.5,col.sign="",line.height=line.height0)
+
+
+
+#######################################################################
+# Output main parameters (list of files...)
+#######################################################################
+meta.vec <- as.character(meta.files)
+meta.files.size <- rep(0,length(meta.files))
+meta.line.txt <- substring.with.dots.adv(paste(meta.vec,"(N=",meta.files.size,")",sep=""),n=N.dots,n.last=15)
+
+# Add this to df.parm 
+data.frame(name="Meta data files",value=meta.line.txt,stringsAsFactors=FALSE),
+
+
+#################################################################################
+# String commands
+
+Remove white space (clanTools):
+ok <- trim.whitespace(HALFunit) == "nm"
+
+xx <- extract.first.number(TXT,1)
+xx$number
+xx$rest.string
+
+extract.given.number(TXT,1)
+
+# Split a string by some delimeter (if fixed is FALSE then the delimeter is a regular expression):
+unlist(strsplit(TXT, ",", fixed=TRUE))
+
+# If the string only contains numbers seperated by commas, then this command is useful: 
+as.numeric(unlist(strsplit(TXT, ",", fixed=TRUE)))
+
+
+################################################################################
+Multiple fixed scales:
+
+plt <- xyplot(I(Gy * Fluence.factor * 1e10)~ log10(mm)|which, 
+main="Topas (3.7 & 3.8p1) computations with 1 MeV electron beam \nfor different physics lists and parameters",
+xlab=list("Log10( Thickness of slab 2 [mm] )",cex=1.2),
+ylab=list("Dose pr. incident fluence [1E-10 Gy cm2]",cex=1.2),
+
+ylim=list(c(2,3),c(1,5)),
+
+as.table=TRUE,
+groups=id,
+auto.key=list(columns=5),
+data=dfstack,
+layout=c(1,2),
+scales=list(y="free",rot=0),
+panel=function(x,y,...){
+panel.xyplot(x,y,...)
+
+###################################################################################
+
+LatticeExtra tricks
+
+plt.02 <- latticeExtra::useOuterStrips(plt.01)
+    lat.opt <- list(layout.widths = list(strip.left = list(x = 1.4)), 
+        layout.heights = list(strip = list(x = c(1.4)), panel = list(x = c(3, 
+            1))))
+    plt.03 <- update(plt.02, lattice.options = lat.opt)
+    plt.04 <- latticeExtra::combineLimits(plt.03)
+    if (FALSE) {
+        print.trellis.plots(list(plt.04), y.size = c(0.2, 0.8))
+    }
+    return(plt.04)
+
+##################################################################################
+Running:
+install_github("claus-e-andersen/junk3")
+
+Gives: 
+Using github PAT from envvar GITHUB_PAT
+Error: Failed to install 'unknown package' from GitHub:
+  HTTP error 401.
+  Bad credentials
+
+  Rate limit remaining: 57/60
+  Rate limit reset at: 2022-08-02 15:23:43 UTC
+
+Analysis:
+The current PAT is somehow in conclict with my repo ??? !!!:
+> Sys.getenv("GITHUB_PAT")
+[1] "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"
+
+Solution:
+Delete the PAT:
+> Sys.unsetenv("GITHUB_PAT")
+
+Explanation from Rstudio:
+This arises from an obscure feature in devtools. Check to see if you have a personal access token (PAT) set with
+Sys.getenv("GITHUB_PAT")
+If you do, make a careful record of it, then remove from the environment with Sys.unsetenv("GITHUB_PAT")
+
+Consider to checkout this potential solution from Stackoverflow:
+remotes::install_github("igorcobelo/florestal", auth_token = NULL) 
+
+###################################################################
+# Interesting example of a tile plot
+# Equivalent to what is used at github for activity mapping.
+# Sep. 2, 2022
+cols <- c("#ebedf0","#9be9a8")  
+cols <- c("red","blue","green","red")
+y <- weekdays(Sys.Date()+0:6)
+x <- paste("W_",seq(1,52),sep="")
+df <- expand.grid(x=x,y=y)
+df$col <- sample(c(NA,NA,NA,NA,NA,cols),nrow(df),replace=TRUE)
+df
+
+ggplot(df,aes(x,y))+
+geom_tile(aes(fill=col,width=0.9,height=0.9)) +
+scale_fill_manual(values=cols) +
+theme(
+axis.title.x=element_blank(),
+axis.title.y=element_blank(),
+axis.ticks.x=element_blank(),
+axis.ticks.y=element_blank()
+)
+
+
+###################################################################
+# How to make a parameter table
+###################################################################
+df.stuff <-
+rbind(
+data.frame(item="File",value=unique(fn)),
+data.frame(item="Cal. note",value=cal.note),
+data.frame(item="Model (electrometer)",value=unique(df$model.electrometer)),
+data.frame(item="SN (electrometer)"   ,value=as.character(unique(df$SN.electrometer))),
+data.frame(item="Range (electrometer)" ,value=as.character(unique(df$range.electrometer))),
+data.frame(item="Range of charge supplied (min / max)" ,value=paste(sprintf.ca("%.1f",min(df$nC.ref)),"nC","/",sprintf.ca("%.1f",max(df$nC.ref)),"nC","(max current =",sprintf.ca("%.3f",signif(mean(abs(max(df$nC.ref))/(df$sweep.dt*df$sweep.N),na.rm=TRUE),2)),"nA)")),
+data.frame(item="Cable (data file)" ,value=unique(df$cable.id)),
+data.frame(item="Capacitor id (data file)",value=unique(df$capacitor.id)),
+data.frame(item="Capacitor note (script)",value=capacitor.note),
+data.frame(item="Capacitor value (script)" ,value=paste(as.character(nF.capacitor.ref),"nF")),
+data.frame(item="Voltmeter data: base value before step" ,value=paste(unique(ifelse(is.null(V.base.use.vec),"None",paste(V.base.use.vec,collapse=" "))),collapse=" ")),
+data.frame(item="Voltmeter data: main reading after step" ,value=paste(unique(V.use.vec),collapse=" ")),
+data.frame(item="Electrometer data: base value before step" ,value=paste(unique(ifelse(is.null(nC.base.use.vec),"None",paste(nC.base.use.vec,collapse=" ")),collapse=" "))),
+data.frame(item="Electrometer data: main reading after step" ,value=paste(unique(nC.use.vec),collapse=" ")),
+data.frame(item="Leakage correction model",value=leak.model.selected),
+data.frame(item="Voltage burden", value=paste(sprintf.ca("%.1f",round(V.burden*1e6,1)),"uV")),
+#data.frame(item="Start"   ,value=start.date),
+#data.frame(item="Stop"    ,value=stop.date),
+data.frame(item="Measurement time: start - stop"   ,value=paste(start.date," - ",stop.date)),
+data.frame(item="Duration",value=paste(as.character(round(duration,2)),"min")),
+#data.frame(item="Capacitor temperature",value=paste(as.character(round(mean(df$degC.cap,na.rm=TRUE),2)),"degC")),
+data.frame(item="Lab. temperature",value=paste(sprintf.ca("%.2f",round(mean(df$degC,na.rm=TRUE),2)),"degC")),
+data.frame(item="Lab. humidity",value=paste(sprintf.ca("%.1f",round(mean(df$RH,na.rm=TRUE),1)),"%RH")),
+data.frame(item="Lab. pressure",value=paste(sprintf.ca("%.2f",round(mean(df$hPa,na.rm=TRUE),2)),"hPa")),
+data.frame(item="Ramp time / Wait.before.first.read  ",value=paste(as.character(round(mean(df$sweep.dt*df$sweep.N,na.rm=TRUE),2)),"s","/",as.character(round(mean(df$wait.before.first.read,na.rm=TRUE),2)),"s")),
+data.frame(item="Wait.leakage / Wait.between.readings / Total step duration",value=paste(as.character(round(mean(df$wait.leakage,na.rm=TRUE),2)),"s"," / ",as.character(round(mean(df$wait.between.readings,na.rm=TRUE),2)),"s"," / ",as.character(round(mean(df$sec.read15-df$sec.read1,na.rm=TRUE),1)),"s")),
+data.frame(item="Initial charge reading (raw) after reset",value=paste(sprintf.ca("%.4e",round(1000*mean(df$nC.read1),3)),"pC","sd =",sprintf.ca("%.4e",round(sd(df$nC.read1)*1000,3)),"pC"," N =",length(df$nC.read1))),
+data.frame(item="End charge reading (raw) after full charge return",
+value=paste(sprintf.ca("%.3f",round(1000*mean(df$nC.read15),3)),"pC",
+"sd =",sprintf.ca("%.3f",round(sd(df$nC.read15)*1000,3)),"pC",
+" N =",length(df$nC.read15),
+"Min =",sprintf.ca("%.1f",round(min(df$nC.read15)*1000,1)),"pC",
+"Max =",sprintf.ca("%.1f",round(max(df$nC.read15)*1000,1)),"pC")),
+data.frame(item="Net charge (leakage corrected etc.) for zero-V step",value=paste(sprintf.ca("%.3f",round(1000*nC.net.at.zero.V,3)),"pC","sd =",sprintf.ca("%.3f",round(1000*s.nC.zero,3)),"pC"," N =",N.zero)),
+data.frame(item="Leakage current (absolute values)",value=paste("Before: Median=",sprintf.ca("%.3f",round(median(abs(df2$pA.Before)),3)),"pA",
+                                                                "After: Median=",sprintf.ca("%.3f",round(median(abs(df2$pA.After)),3)),"pA",
+                                                                "Max=",sprintf.ca("%.3f",round(max(abs(df2$pA.After)),3)),"pA")),
+data.frame(item=paste("k.elec.all (all data pooled; stat.limit =",k.elec.stat.limit*100,"%)"),value=paste(sprintf.ca("%.6f",round(k.elec.all,6)),"nC/nC","sd =",sprintf.ca("%.3f",round(s.pct.k.elec.all,3)),"%"," N =",N.all)),
+data.frame(item="k.elec.pos (positive charge only)",value=paste(sprintf.ca("%.6f",round(k.elec.pos,6)),"nC/nC","sd =",sprintf.ca("%.3f",round(s.pct.k.elec.pos,3)),"%"," N =",N.pos)),
+data.frame(item="k.elec.neg (negative charge only)",value=paste(sprintf.ca("%.6f",round(k.elec.neg,6)),"nC/nC","sd =",sprintf.ca("%.3f",round(s.pct.k.elec.neg,3)),"%"," N =",N.neg)),
+data.frame(item="Polarity ratio: k.pol = k.elec.pos / k.elec.neg",value=as.character(round(k.elec.pos/k.elec.neg,6))),
+data.frame(item="Polarity difference : k.elec.pos - k.elec.neg (ANOVA)",value=paste(fm.txt)),
+data.frame(item="Reference polarity for k.non.lin coeff.",value=paste(ref.polarity.txt,"(",ref.polarity.k,")")),
+data.frame(item="Leakage correction uncert. = u.k.elec.model", value=paste(sprintf.ca("%.4f",round(u.model/k.elec.all*100,4)),"%"))
+)
+
+# table.dots.vec is part of clanTools
+df.stuff$item<- table.dots.vec(as.character(df.stuff$item),N=62,before=!TRUE,st=".",st.space="  ")
+df.stuff$value <- table.dots.vec(as.character(df.stuff$value),N=67,before=!TRUE,st="_",st.space="  ")
+df.stuff
+
+
+pretty.func2a <- function(x, col.num = 1){
+if(is.numeric(x)){
+y <- round(x, digits=4) 
+if(col.num==2){y <- sprintf.ca("%.3f", round(x,3))} 
+if(col.num==3){y <- sprintf.ca("%.2f", round(x,2))} 
+if(col.num==4){y <- sprintf.ca("%.2f", round(x,2))} 
+if(col.num==5){y <- sprintf.ca("%.3f", round(x,3))} 
+if(col.num==6){y <- sprintf.ca("%.3f", round(x,3))} 
+if(col.num==7){y <- sprintf.ca("%.3f", round(x,3))} 
+if(col.num==8){y <- sprintf.ca("%.3f", round(x,3))}
+if(col.num==9){y <- sprintf.ca("%.0f", round(x,0))}
+if(col.num==10){y <- sprintf.ca("%.3f", round(x,3))}
+if(col.num==11){y <- sprintf.ca("%.3f", round(x,3))}
+if(col.num==12){y <- sprintf.ca("%.3f", round(x,3))}
+x <- y
+x
+}
+else x}
+
+####
+line.height=line.height0 <- 0.022
+line.height=line.height0 <- 0.026
+PP <- list(0.05,0.97,1)
+
+PP <- txtplot(paste("Electrometer charge calibration: ",
+as.character(unique(df$model.electrometer)),"SN",as.character(unique(df$SN.electrometer)),
+"  (",fn,")\n",sep=""), new=T, PP, cex=0.5,line.height=line.height0)
+
+PP <- txtplot(data.frame(df.stuff),new=F,PP,cex=0.5,
+pretty.func = pretty.func2a,col.sign="",line.height=line.height0)
+
+##########################################################################
+# How to do a left-aligned main headed in a lattice plot?
+# See below and just set main = main.leftc
+# See Lattice book p. 152 / sec. 9.2.1 + demo("labels",package="lattice")
+
+main.left <-
+textGrob("Pilot proton flash audit: DTU alanine results \nIndicated uncertainty (0.25 Gy) is the combined uncertainty (k=1) for five pellets",
+just="left",
+x=unit(0.00,"npc")+unit(c(10.0),"mm"),
+y=unit(0.0,"npc")+unit(c(00.0),"mm"),
+gp = gpar(col="black", cex=1))
+
+######################################################################
+# How to do a cover page box with text using txtplot:
+
+txt <- "\nNow only consider the configuration \nwith the thermistor directly\nin water (no plastic bag)"
+PP <- list(0.05, 0.9, 1)
+PP <- txtplot(txt, cex = 2.0, T, PP, line.size = 80, box = list(c(0, 1, 0.3, 0.85), lty = 1, lwd = 6, col = "blue"))
+
+######################################################################
+
+tikz device (see separate folder).
+
+######################################################################
+# This is better than mtext, I think...
+
+do.footer <- function(Fig.no.sel=NA, extra=""){
+if(!is.na(Fig.no.sel)){
+  Fig.no <- Fig.no.sel
+}
+if(is.na(Fig.no.sel)){
+  Fig.no <- get("FIG.NO",envir = .GlobalEnv) + 1
+  Fig.no <- as.integer(Fig.no)
+  assign("FIG.NO",Fig.no,envir = .GlobalEnv)
+}
+  PP <- list(0.80,0.01,1)
+  PP <- txtplot(paste("Fig. ",Fig.no, extra), new=F, PP, cex=1)
+}
+# Use: FIG.NO <- 100
+#      do.footer()
+
