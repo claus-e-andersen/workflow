@@ -103,8 +103,52 @@ update.packages(ask=FALSE, CheckBuilt=TRUE)
 
 ######################################################3
 
-Tricks from the cover of my R lattice book!
 
+#####################
+# How to control the height of the strip and the fontsize:
+
+plt.01 <- histogram(~Gy.pr.e|reorder.for.trellis(factor(structure,levels=structure.levels)),
+         par.strip.text=list(cex=0.48), # Strip font size
+         aspect=0.6,
+         data=dfplt,
+         xlim=dose.limit, #range(df3$Gy.pr.e),
+         panel=panel.histogram.DUR,
+         panel.layout=3
+)
+
+# Strip height:
+lat.opt <- list(layout.heights = list(strip = list(x = c(3.4))))
+plt.02 <- update(plt.01, lattice.options = lat.opt)
+plt.02
+
+plt <- update(plt, lattice.options = lat.opt)
+print(plt)
+
+
+
+###########################################################
+# How could I find the strip.left ???
+lattice.getOption("layout.widths")
+str(lattice.getOption("layout.widths"), max.level = 2)
+
+###########################################################
+
+
+# If you use outer strips, you can control the size with the strip.left argument:
+
+plt.01 <- plt
+plt.02 <- latticeExtra::useOuterStrips(plt.01)
+lat.opt <- list(layout.heights = list(strip = list(x = c(1.6))),
+layout.widths = list(strip.left = list(x=c(1.6))))
+plt.03 <- update(plt.02, lattice.options = lat.opt)
+
+print(plt.03)
+
+
+#############################################
+
+
+Tricks from the cover of my R lattice book!
 
 auto.key=list(space="right,columns=3")
 
@@ -286,16 +330,23 @@ panel.xyplot(x,y,...)
 
 LatticeExtra tricks
 
+plt.01 <- yout lattice plot
+
 plt.02 <- latticeExtra::useOuterStrips(plt.01)
-    lat.opt <- list(layout.widths = list(strip.left = list(x = 1.4)), 
-        layout.heights = list(strip = list(x = c(1.4)), panel = list(x = c(3, 
-            1))))
-    plt.03 <- update(plt.02, lattice.options = lat.opt)
-    plt.04 <- latticeExtra::combineLimits(plt.03)
-    if (FALSE) {
-        print.trellis.plots(list(plt.04), y.size = c(0.2, 0.8))
-    }
-    return(plt.04)
+ 
+lat.opt <- list(layout.widths = list(
+                strip.left = list(x = 1.4)), 
+                layout.heights = list(strip = list(x = c(1.4)), 
+                panel = list(x = c(1,1))))
+
+plt.03 <- update(plt.02, lattice.options = lat.opt)
+plt.04 <- latticeExtra::combineLimits(plt.03)
+  
+if (FALSE) {
+   print.trellis.plots(list(plt.04), y.size = c(0.2, 0.8))
+}
+
+print(plt.04)
 
 ##################################################################################
 Running:
@@ -307,17 +358,6 @@ Error: Failed to install 'unknown package' from GitHub:
   HTTP error 401.
   Bad credentials
 
-  Rate limit remaining: 57/60
-  Rate limit reset at: 2022-08-02 15:23:43 UTC
-
-Analysis:
-The current PAT is somehow in conclict with my repo ??? !!!:
-> Sys.getenv("GITHUB_PAT")
-[1] "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"
-
-Solution:
-Delete the PAT:
-> Sys.unsetenv("GITHUB_PAT")
 
 Explanation from Rstudio:
 This arises from an obscure feature in devtools. Check to see if you have a personal access token (PAT) set with
@@ -479,3 +519,192 @@ if(is.na(Fig.no.sel)){
 # Use: FIG.NO <- 100
 #      do.footer()
 
+
+###################################
+# How to draw a half-line vertically?
+# First get the limits of the current panel:
+limits <- current.panel.limits(unit = "native")
+panel.lines(c(0,0), c(limits$ylim[1], 0.5*(limits$ylim[1]+limits$ylim[2])), lty="dashed", col="black")
+
+#################################### 
+# How to export / save a file to ASCII
+write.table(df %>% select(-XXXX) %>% data.frame(.),"whatever.txt", sep=";", row.names=FALSE)
+
+
+#############################################
+
+How to get data from panel function and back to the global environment!
+#############################################
+df.panel.collect <- NULL
+
+panel=function(x,y,subscripts,...){
+
+panel.xyplot(x,y,...)
+
+# We get the model results out of the panel function using df.panel.collect
+df <- get("df.panel.collect",envir = .GlobalEnv)
+df0 <- data.frame(id.group=idg0,id=id0,
+read.no=read.no0,
+read.txt=read.txt0,
+rot=rot0,
+#time.group=tg0,
+dayno=dayno0,
+x1=xtop.max,x2=xtop.min,y1=ytop.max,y2=ytop.min, 
+y.poly=yamp*k.mass0,y.robust=yamp2*k.mass0,mg=mg0,k.mass=k.mass0,fn=fn0)
+row.names(df0) <- NULL
+if(is.null(df)) {df <- df0 } else {df <- rbind(df,df0)}
+assign("df.panel.collect",df,envir=.GlobalEnv)
+} # panel
+#############################################
+
+# The plot must be "run", but we may not want any actual print 
+# Why? Because of the side effect related to df.panel.collect
+if("plt1" %in% plt.wanted){print(plt1)} else {invisible(print(plt1))}
+
+
+
+#############################################
+# Simple log file
+#############################################
+# How to make a simple log file
+# Will not print complex objects like data frames.
+
+time.analysis <- Sys.time()
+time.analysis.formated <- format(Sys.time(), "%Y-%m-%d-%H-%M-%S")
+
+
+cat.dataframe <- function(df,txt="",log.file){
+cat(txt,file=log.file,append=TRUE,fill=TRUE)
+for(ii in 1:nrow(df)){
+  cat(paste(df[1,],collapse=" "),file=log.file,append=TRUE,fill=TRUE)
+}
+}
+
+log.file <- paste("Monochrom-Log-",time.analysis.formated,".txt",sep="")
+
+df.move <- data.frame(x=c1:3,y=1:3)
+for(i in 1:10){
+  cat("Whatever", file=log.file,append=TRUE,fill=TRUE)
+  cat.dataframe(df.move,"df.move:", log.file)
+}
+
+
+########################################################
+# Simple FWHM 
+########################################################
+
+
+FWHM.wanted <- TRUE
+if(FWHM.wanted){
+ymax <- max(y)
+yhalfmax <- ymax/2
+panel.abline(h=ymax,lty="dashed")
+panel.abline(h=yhalfmax,lty="dashed")
+
+ok <- x > 0
+x.plus <- approx(y[ok],x[ok],xout=yhalfmax)$y
+panel.abline(v=x.plus,lty="dashed")
+
+ok <- x < 0
+x.minus <- approx(y[ok],x[ok],xout=yhalfmax)$y
+panel.abline(v=x.minus,lty="dashed")
+
+FWHM <- x.plus - x.minus
+grid::grid.text(paste("FWHM:", sprintf("%.2f", round(FWHM, 2)),"mm"), 
+                x = grid::unit(0.1, "npc"), 
+                y = grid::unit(0.3, "npc"), just = 0, 
+                gp = grid::gpar(cex = cex0))
+
+} # FWHM
+
+
+
+#################################
+# Fancy strips in lattice. From stackoverflow
+# https://stackoverflow.com/questions/17888505/varying-strip-heights-for-multi-panel-lattice-plots
+
+bgColors <- c("black", "green4", "blue", "red", "purple", "yellow")
+txtColors <- c("white", "yellow", "white", "white", "green", "red")
+stripHt <- rep(c(-1,0),each = 3)
+
+# Create a function to be passes to "strip=" argument of xyplot
+myStripStyle <- function(which.panel, factor.levels, ...) {
+    panel.rect(0, stripHt[which.panel], 1, 1,
+               col = bgColors[which.panel],
+               border = 1)
+    panel.text(x = 0.5, y = 0.5,
+               font=2,
+               lab = factor.levels[which.panel],
+               col = txtColors[which.panel])
+}   
+ 
+xyplot(yield ~ year | site, data = barley, strip=myStripStyle)
+
+
+######################################
+The strip names can be changed in the function with the strip.custom function. A related question was asked in Change text on strips in lattice plots. In your case you would add the following argument to your densityplot() call:
+
+   strip = strip.custom(factor.levels = c("In patient", "Out patient"))
+
+######################################
+Custom key:
+
+colors = c("black", "blue")
+lines = c(1,2) #1
+points = c(16,17)
+key.trans <- list(title="Gender",
+                  corner = c(0.90, 0.90),
+                  #space="bottom", columns=2, #2
+                  text=list(c("Female","Male")),
+                  #points=list(pch=points, col=colors),
+                  lines=list(col=colors, lty=lines),
+                  cex.title=1, cex=.9) 
+
+and then just akk   key=key.transin the lattice plot call.
+
+###################################################
+Problem with wrong y-axis spacing for dotplots (categorical / factor variables and scales / relation = "free"
+
+https://stackoverflow.com/questions/36103085/inconsistent-spacing-in-lattice-dotplot-between-y-values
+Inconsistent spacing in lattice dotplot between y values
+
+I'm trying to use dotplot() from ´lattice´ to plot a data set where categories are only present for a subset, 
+and I'm calling scales = list(y = list(relation = "free")) to avoid unnecessary vertical spacing. However, 
+doing this seems to bungle up the vertical spacing between items. What more is that is seems to be related 
+to whether or not the categories are overlapping, since it is only then that the error occurs.
+
+library(lattice)
+
+variables <- c(rep("Age", 4), rep("Sex", 2), rep("Children", 3))
+levels <- c(1, 5, 100, 101, "Females", "Males", 2, 3, 90)
+values <- rnorm(9)    
+
+dotplot(levels ~ values | variables, layout = c(1,3),
+        scales = list(y = list(relation = "free")))
+
+SOLUTION:
+
+You can use a function by the author of lattice (see dotplot, dropping unused levels of 'y').
+
+Quoting Deepayan Sarkar from that post:
+
+"It's a bit problematic. Basically, you can use relation="free"/"sliced", but y behaves as as.numeric(y) would. 
+So, if the small subset in each panel are always more or less contiguous (in terms of the levels being close 
+to each other) then you would be fine. Otherwise you would not. In that case, you can still write your 
+own prepanel and panel functions,"
+
+dotplot(levels ~ values | variables, layout = c(1,3),
+        scales = list(y = list(relation = "free")),
+        prepanel = function(x, y, ...) {
+          yy <- y[, drop = TRUE]
+          list(ylim = levels(yy),
+               yat = sort(unique(as.numeric(yy))))
+        },
+        panel = function(x, y, ...) {
+          yy <- y[, drop = TRUE]
+          panel.dotplot(x, yy, ...)
+        }) 
+
+Claus: THIS WORKS! See for example, LFMD-report-68 (Nov. 2024).
+
+-----------------------------
